@@ -1,4 +1,4 @@
-module github.com/danielcomboni/gen-repo-service-controller-utils
+module github.com/danielcomboni/general-repo-service-controller-utils
 
 go 1.19
 
