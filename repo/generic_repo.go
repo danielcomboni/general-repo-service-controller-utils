@@ -18,7 +18,7 @@ func RepoInitializer(instance *gorm.DB) {
 	Instance = instance
 }
 
-func RunMigrations(entityModels ...interface{}){
+func RunMigrations(entityModels ...interface{}) {
 	gen_utils.Logger.Info("Database Migration Started...")
 	err := Instance.AutoMigrate(entityModels...)
 	if err != nil {
@@ -27,7 +27,6 @@ func RunMigrations(entityModels ...interface{}){
 	}
 	gen_utils.Logger.Info("Database Migration Completed...")
 }
-
 
 type Pagination struct {
 	Limit int    `json:"limit"`
@@ -71,7 +70,7 @@ func Create[T any](model *T) (T, error) {
 	result := Instance.Create(&model).Scan(&t)
 	_, err := result.DB()
 	if err != nil {
-		msg := fmt.Sprintf("failed to create: %v",err.Error())
+		msg := fmt.Sprintf("failed to create: %v", err.Error())
 		gen_utils.Logger.Error(msg)
 		return *model, err
 	}
@@ -84,6 +83,36 @@ func Create[T any](model *T) (T, error) {
 
 	if result.RowsAffected > 0 {
 		gen_utils.Logger.Info(fmt.Sprintf("saved to database: id: %v", gen_utils.SafeGetFromInterface(t, "$.id")))
+	}
+	return t, nil
+}
+
+func CreateWithPropertyCheck[T any](model *T, property ...string) (T, error) {
+	gen_utils.Logger.Info(fmt.Sprintf("\n\ncreating a new record: %v", reflect.TypeOf(*new(T)).Name()))
+	var t T
+	// result := Instance.Create(&model).Scan(&t)
+	result := Instance.Create(&model).Scan(&t)
+
+	_, err := result.DB()
+	if err != nil {
+		msg := fmt.Sprintf("failed to create: %v", err.Error())
+		gen_utils.Logger.Error(msg)
+		return *model, err
+	}
+
+	// if property to check is provided and the entity actually contains the particular property
+	if gen_utils.IsGreaterThan(len(property), 0) && gen_utils.HasField[T](property[0]) {
+		if gen_utils.IsNullOrEmpty((gen_utils.SafeGetFromInterface(&model, "$."+gen_utils.ToCamelCaseLower(property[0])))) {
+			msg := fmt.Sprintf("not saved: %v", result.Error.Error())
+			log.Println(msg)
+			return *model, errors.New(msg)
+		}
+	}
+
+	if gen_utils.HasField[T]("Id") {
+		if result.RowsAffected > 0 {
+			gen_utils.Logger.Info(fmt.Sprintf("saved to database: id: %v", gen_utils.SafeGetFromInterface(t, "$.id")))
+		}
 	}
 	return t, nil
 }
@@ -137,7 +166,7 @@ func omitsHandler(omits ...string) *gorm.DB {
 	return instance
 }
 
-func GetAllByFields[T any](queryMap map[string]interface{}, preloads ...string) ([]T, error) {
+func GetAllByFieldsWithPagination[T any](queryMap map[string]interface{}, preloads ...string) ([]T, error) {
 	gen_utils.Logger.Info(fmt.Sprintf("\n\nretreiving collection: %v", reflect.TypeOf(*new(T)).Name()))
 	var all []T
 	offset, limit := paginationParams()
@@ -160,7 +189,28 @@ func GetAllByFields[T any](queryMap map[string]interface{}, preloads ...string) 
 	return all, nil
 }
 
-func GetOneById[T any](id string, preloads ...string) (T, error) {
+func GetAllByFieldsWithNoPagination[T any](queryMap map[string]interface{}, preloads ...string) ([]T, error) {
+	gen_utils.Logger.Info(fmt.Sprintf("\n\nretreiving collection: %v", reflect.TypeOf(*new(T)).Name()))
+	var all []T
+
+	var instance *gorm.DB
+
+	if len(preloads) == 0 {
+		instance = Instance.Where(queryMap).Find(&all)
+	} else {
+		instance = preloadsHandler(preloads...).Where(queryMap).Find(&all)
+	}
+
+	result := instance
+	_, err := result.DB()
+	if err != nil {
+		gen_utils.Logger.Error(fmt.Sprintf("failed to retrieve: %v %v", reflect.TypeOf(*new(T)).Name(), err))
+		return all, err
+	}
+	return all, nil
+}
+
+func GetOneById[T any](id interface{}, preloads ...string) (T, error) {
 	gen_utils.Logger.Info(fmt.Sprintf("\n\nretreiving single row of: %v by id: %v", reflect.TypeOf(*new(T)).Name(), id))
 	var row T
 
@@ -175,7 +225,7 @@ func GetOneById[T any](id string, preloads ...string) (T, error) {
 
 	_, err := result.DB()
 	if err != nil {
-		log.Println(fmt.Sprintf("failed to retrieve: %v %v", reflect.TypeOf(*new(T)).Name(), err))
+		gen_utils.Logger.Error(fmt.Sprintf("failed to retrieve: %v %v", reflect.TypeOf(*new(T)).Name(), err))
 		return row, err
 	}
 	return row, nil
@@ -187,7 +237,7 @@ func GetOneByModelPropertiesCheckIdPresence[T any](queryMap map[string]interface
 	result := Instance.Where(queryMap).First(&row)
 	_, err := result.DB()
 	if err != nil {
-		log.Println(fmt.Sprintf("failed to retrieve: %v %v", reflect.TypeOf(*new(T)).Name(), err))
+		gen_utils.Logger.Error(fmt.Sprintf("failed to retrieve: %v %v", reflect.TypeOf(*new(T)).Name(), err))
 		return row, err
 	}
 
@@ -198,6 +248,52 @@ func GetOneByModelPropertiesCheckIdPresence[T any](queryMap map[string]interface
 		log.Println(msg)
 		return row, errors.New(msg)
 	}
+	return row, nil
+}
+
+func GetOneByModelPropertiesCheckPropertyPresence[T any](queryMap map[string]interface{}, propertiesCheck ...string) (T, error) {
+	gen_utils.Logger.Info(fmt.Sprintf("\n\nretreiving single row of: %v by values: %#v", reflect.TypeOf(*new(T)).Name(), queryMap))
+	var row T
+	result := Instance.Where(queryMap).First(&row)
+	_, err := result.DB()
+	if err != nil {
+		gen_utils.Logger.Error(fmt.Sprintf("failed to retrieve: %v %v", reflect.TypeOf(*new(T)).Name(), err))
+		return row, err
+	}
+
+	if gen_utils.IsGreaterThan(len(propertiesCheck), 0) {
+		for _, property := range propertiesCheck {
+			r := reflect.ValueOf(row)
+			f := reflect.Indirect(r).FieldByName(property)
+			if f.String() == "" {
+				msg := "record not found"
+				gen_utils.Logger.Warn(msg)
+				return row, errors.New(msg)
+			}
+		}
+	}
+
+	// r := reflect.ValueOf(row)
+	// f := reflect.Indirect(r).FieldByName("Id")
+	// if f.String() == "" {
+	// 	msg := "record not found"
+	// 	log.Println(msg)
+	// 	return row, errors.New(msg)
+	// }
+	return row, nil
+}
+
+func GetOneByModelProperties[T any](queryMap map[string]interface{}) (T, error) {
+	gen_utils.Logger.Info(fmt.Sprintf("\n\nretreiving single row of: %v by values: %#v", reflect.TypeOf(*new(T)).Name(), queryMap))
+	var row T
+	result := Instance.Where(queryMap).First(&row)
+	_, err := result.DB()
+
+	if err != nil {
+		gen_utils.Logger.Error(fmt.Sprintf("failed to retrieve: %v %v", reflect.TypeOf(*new(T)).Name(), err))
+		return row, err
+	}
+
 	return row, nil
 }
 
@@ -243,7 +339,7 @@ func UpdateById[T any](t T, id string) (T, error) {
 	err = mapstructure.Decode(t, &one)
 
 	if err != nil {
-		log.Println(fmt.Sprintf("failed to map structure: %v", err))
+		gen_utils.Logger.Error(fmt.Sprintf("failed to map structure: %v", err.Error()))
 		return t2, err
 	}
 
@@ -254,19 +350,98 @@ func UpdateById[T any](t T, id string) (T, error) {
 	gen_utils.Logger.Info(fmt.Sprintf("rows affected: %v", gen_utils.ConvertInt64ToStr(rowsAffected)))
 
 	if result.Error != nil {
-		log.Println(fmt.Sprintf("failed to update env: %v", result.Error))
+		gen_utils.Logger.Error(fmt.Sprintf("failed to update env: %v", result.Error))
 		return t2, result.Error
 	}
 
 	if result.RowsAffected == 0 {
-		log.Println(fmt.Sprintf("not updated: affected rows: %v", result.RowsAffected))
+		gen_utils.Logger.Warn(fmt.Sprintf("not updated: affected rows: %v", result.RowsAffected))
 		return t2, errors.New("not updated")
 	}
 
 	return one, nil
 }
 
-func DeleteHardById[T any](id string) (int64, error) {
+func UpdateByIdWithPropertyCheck[T any](t T, id interface{}, property ...string) (T, error) {
+
+	gen_utils.Logger.Info(fmt.Sprintf("\n\nupdating row of: %v by id: %v", reflect.TypeOf(*new(T)).Name(), id))
+	one, err := GetOneById[T](id)
+	var t2 T
+	if err != nil {
+		return t2, err
+	}
+
+	err = mapstructure.Decode(t, &one)
+
+	if err != nil {
+		gen_utils.Logger.Error(fmt.Sprintf("failed to map structure: %v", err.Error()))
+		return t2, err
+	}
+
+	// result := Instance.Where("id=?", id).Updates(&one).Scan(&one)
+	// result := Instance.Updates(&one).Scan(&one)
+	result := Instance.Updates(&one).Scan(&one)
+	rowsAffected := result.RowsAffected
+	gen_utils.Logger.Info(fmt.Sprintf("rows affected: %v", gen_utils.ConvertInt64ToStr(rowsAffected)))
+
+	if result.Error != nil {
+		gen_utils.Logger.Error(fmt.Sprintf("failed to update env: %v", result.Error))
+		return t2, result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		gen_utils.Logger.Warn(fmt.Sprintf("not updated: affected rows: %v", result.RowsAffected))
+		return t2, errors.New("not updated")
+	}
+
+	// if property to check is provided and the entity actually contains the particular property
+	if gen_utils.IsGreaterThan(len(property), 0) && gen_utils.HasField[T](property[0]) {
+		if gen_utils.IsNullOrEmpty((gen_utils.SafeGetFromInterface(one, "$."+gen_utils.ToCamelCaseLower(property[0])))) {
+			msg := fmt.Sprintf("not updated: %v", result.Error.Error())
+			gen_utils.Logger.Error(msg)
+			return one, errors.New(msg)
+		}
+		gen_utils.Logger.Info(fmt.Sprintf("updated row with %v: %v", property[0], gen_utils.SafeGetFromInterface(one, "$."+gen_utils.ToCamelCaseLower(property[0]))))
+	}else {
+		gen_utils.Logger.Info(fmt.Sprintf("updated row with id: %v", gen_utils.SafeGetFromInterface(one, "$.id")))
+	}
+	return one, nil
+}
+
+func DeleteHardByFields[T any](queryMap map[string]interface{}) (int64, error) {
+	gen_utils.Logger.Info(fmt.Sprintf("\n\nhard deleting a row of: %v by fields: %v", reflect.TypeOf(*new(T)).Name(), queryMap))
+
+	one, err := GetOneByModelProperties[T](queryMap)
+	var t2 T
+	if err != nil {
+		return 0, err
+	}
+
+	err = mapstructure.Decode(one, &t2)
+
+	if err != nil {
+		gen_utils.Logger.Error(fmt.Sprintf("failed to map structure: %v", err))
+		return 0, err
+	}
+
+	r := Instance.Delete(&one).Where(queryMap)
+
+	if r.Error != nil {
+		gen_utils.Logger.Error(fmt.Sprintf("failed to delete row by fields: %v", queryMap))
+		gen_utils.Logger.Error(fmt.Sprintf("err: %v", r.Error))
+		return 0, r.Error
+	}
+
+	if r.RowsAffected <= 0 {
+		gen_utils.Logger.Warn(fmt.Sprintf("failed to delete row by fields: %v", queryMap))
+		gen_utils.Logger.Warn(fmt.Sprintf("number of rows deleted: %v", r.RowsAffected))
+		return 0, r.Error
+	}
+
+	return r.RowsAffected, nil
+}
+
+func DeleteHardById[T any](id interface{}) (int64, error) {
 	gen_utils.Logger.Info(fmt.Sprintf("\n\nhard deleting a row of: %v by id: %v", reflect.TypeOf(*new(T)).Name(), id))
 
 	one, err := GetOneById[T](id)
@@ -278,22 +453,25 @@ func DeleteHardById[T any](id string) (int64, error) {
 	err = mapstructure.Decode(one, &t2)
 
 	if err != nil {
-		log.Println(fmt.Sprintf("failed to map structure: %v", err))
+		gen_utils.Logger.Error(fmt.Sprintf("failed to map structure: %v", err.Error()))
 		return 0, err
 	}
 
 	r := Instance.Delete(&one).Where("id=?", id)
 
 	if r.Error != nil {
-		log.Println(fmt.Sprintf("failed to delete row by id: %v", id))
-		log.Println(fmt.Sprintf("err: %v", r.Error))
+		gen_utils.Logger.Error(fmt.Sprintf("failed to delete row by id: %v", id))
+		gen_utils.Logger.Error(fmt.Sprintf("err: %v", r.Error))
 		return 0, r.Error
 	}
 
 	if r.RowsAffected <= 0 {
 		gen_utils.Logger.Warn(fmt.Sprintf("failed to delete row by id: %v", id))
 		gen_utils.Logger.Warn(fmt.Sprintf("number of rows deleted: %v", r.RowsAffected))
-		return 0, r.Error
+		if r.Error != nil {
+			return 0, r.Error
+		}
+		return 0, errors.New("not successful")
 	}
 
 	return r.RowsAffected, nil
