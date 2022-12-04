@@ -2,6 +2,8 @@ package routes_utils
 
 import (
 	"fmt"
+
+	"github.com/danielcomboni/general-repo-service-controller-utils/controller"
 	"github.com/gin-gonic/gin"
 )
 
@@ -33,4 +35,31 @@ func Put(endpointGroup *gin.RouterGroup, domainResource, parameter string, contr
 func Del(endpointGroup *gin.RouterGroup, domainResource, parameter string, controllerMethod gin.HandlerFunc) {
 	relativePath := concatEndpoint(domainResource, parameter)
 	endpointGroup.DELETE(relativePath, controllerMethod)
+}
+
+type SingleEntityGroupedRouteDefinition[T any] struct {
+	RelativePath     string           `json:"relativePath,omitempty"`
+	DomainResource   string           `json:"domainResource,omitempty"`
+	CustomerHandlers *gin.RouterGroup `json:"handlers,omitempty"`
+}
+
+func (s *SingleEntityGroupedRouteDefinition[T]) SetSingleEntityGroupedRouteDefinition(router *gin.Engine, relativePath, domainResource string, customerHandlers ...*gin.RouterGroup) {
+
+	s.DomainResource = domainResource
+	s.RelativePath = relativePath
+
+	if len(customerHandlers) == 0 {
+		endpointGroupV1 := router.Group(relativePath)
+		{
+			Post(endpointGroupV1, domainResource, relativePath, controller.CreateWithoutServiceFuncSpecified_AndCheckPropertyPresence[T]())
+			Get(endpointGroupV1, domainResource, relativePath, controller.GetAllWithoutServiceFuncSpecifiedWithNoPagination[T]())
+			Get(endpointGroupV1, domainResource, fmt.Sprintf("%v/:id", relativePath), controller.GetOneByIdWithoutServiceFuncSpecifiedWith[T]())
+			Put(endpointGroupV1, domainResource, fmt.Sprintf("%v/:id", relativePath), controller.UpdateByIdWithoutServiceFuncSpecified_AndCheckPropertyPresence[T]())
+			Del(endpointGroupV1, domainResource, fmt.Sprintf("%v/:id", relativePath), controller.DeletePermanentlyById_WithoutServiceFuncSpecified[T]())
+		}
+	}else {
+		s.CustomerHandlers = customerHandlers[0]
+	}
+
+
 }

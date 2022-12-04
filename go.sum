@@ -70,6 +70,10 @@ github.com/danielcomboni/general-go-utils v0.2.0 h1:AjAVttzXvbAZKxaq6oWmZm2V91V1
 github.com/danielcomboni/general-go-utils v0.2.0/go.mod h1:8nLG9l7o7NsI4cIhder1f8rtHCGFDarV3fqLsn7AAMs=
 github.com/danielcomboni/general-go-utils v0.2.1 h1:Jfro9V6eYTSbBcaNN0d8rfrPNpXTQeVs2vJA7QoNrOc=
 github.com/danielcomboni/general-go-utils v0.2.1/go.mod h1:8nLG9l7o7NsI4cIhder1f8rtHCGFDarV3fqLsn7AAMs=
+github.com/danielcomboni/general-go-utils v0.2.2 h1:j9bFdIbNXbKMI0Us647GUYbymPPjbYwe9+vX62yoCLU=
+github.com/danielcomboni/general-go-utils v0.2.2/go.mod h1:8nLG9l7o7NsI4cIhder1f8rtHCGFDarV3fqLsn7AAMs=
+github.com/danielcomboni/general-go-utils v0.2.3 h1:WTRWoxDO5DlP/PG99E/ZhW112TgxdFMWmbH1cVWyxbw=
+github.com/danielcomboni/general-go-utils v0.2.3/go.mod h1:8nLG9l7o7NsI4cIhder1f8rtHCGFDarV3fqLsn7AAMs=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
