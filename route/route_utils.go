@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/danielcomboni/general-repo-service-controller-utils/controller"
+	"github.com/danielcomboni/general-repo-service-controller-utils/model"
 	"github.com/gin-gonic/gin"
 )
 
@@ -38,12 +39,14 @@ func Del(endpointGroup *gin.RouterGroup, domainResource, parameter string, contr
 }
 
 type SingleEntityGroupedRouteDefinition[T any] struct {
-	RelativePath     string           `json:"relativePath,omitempty"`
-	DomainResource   string           `json:"domainResource,omitempty"`
-	CustomerHandlers *gin.RouterGroup `json:"handlers,omitempty"`
+	RelativePath         string           `json:"relativePath,omitempty"`
+	DomainResource       string           `json:"domainResource,omitempty"`
+	CustomerHandlers     *gin.RouterGroup `json:"handlers,omitempty"`
+	DefaultEndpointGroup *gin.RouterGroup `json:"defaultEndpointGroup,omitempty"`
 }
 
-func (s *SingleEntityGroupedRouteDefinition[T]) SetSingleEntityGroupedRouteDefinition(router *gin.Engine, relativePath, domainResource string, customerHandlers ...*gin.RouterGroup) {
+func (s *SingleEntityGroupedRouteDefinition[T]) SetSingleEntityGroupedRouteDefinition(router *gin.Engine, relativePath, domainResource string,
+	customerHandlers ...*gin.RouterGroup) *SingleEntityGroupedRouteDefinition[T] {
 
 	s.DomainResource = domainResource
 	s.RelativePath = relativePath
@@ -57,9 +60,24 @@ func (s *SingleEntityGroupedRouteDefinition[T]) SetSingleEntityGroupedRouteDefin
 			Put(endpointGroupV1, domainResource, fmt.Sprintf("%v/:id", relativePath), controller.UpdateByIdWithoutServiceFuncSpecified_AndCheckPropertyPresence[T]())
 			Del(endpointGroupV1, domainResource, fmt.Sprintf("%v/:id", relativePath), controller.DeletePermanentlyById_WithoutServiceFuncSpecified[T]())
 		}
-	}else {
+		s.DefaultEndpointGroup = endpointGroupV1
+	} else {
 		s.CustomerHandlers = customerHandlers[0]
 	}
 
+	return s
+}
 
+func (s *SingleEntityGroupedRouteDefinition[T]) AddGetOneUsingPathParams(relativePath, domainResource string, 
+	queryParams ...model.QueryStructure) *SingleEntityGroupedRouteDefinition[T] {	
+	path := concatEndpoint(domainResource, relativePath)
+	s.DefaultEndpointGroup.GET(path, controller.GetOneByParamsWithoutServiceFuncSpecifiedWith[T](queryParams...))
+	return s
+}
+
+func (s *SingleEntityGroupedRouteDefinition[T]) AddGetAllUsingPathParams(relativePath, domainResource string, 
+	queryParams ...model.QueryStructure) *SingleEntityGroupedRouteDefinition[T] {	
+	path := concatEndpoint(domainResource, relativePath)
+	s.DefaultEndpointGroup.GET(path, controller.GetAllByParamsWithoutServiceFuncSpecifiedWith[T](queryParams))	
+	return s
 }

@@ -1,10 +1,14 @@
 package controller
 
 import (
+	"fmt"
+	"reflect"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 
+	general_goutils "github.com/danielcomboni/general-go-utils"
+	"github.com/danielcomboni/general-repo-service-controller-utils/model"
 	"github.com/danielcomboni/general-repo-service-controller-utils/repo"
 	"github.com/danielcomboni/general-repo-service-controller-utils/responses"
 )
@@ -36,7 +40,7 @@ func GetAllWithServiceFuncSpecified_WithNoPagination[T any](c *gin.Context, fnSe
 
 func GetAllWithoutServiceFuncSpecifiedWithNoPagination[T any]() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		
+
 		rows, err := repo.GetAllWithNoPagination[T]()
 		if err != nil {
 			c.JSON(responses.InternalServerError, responses.SetResponse(responses.InternalServerError, "error", err.Error()))
@@ -82,6 +86,42 @@ func GetAllWithoutServiceFuncSpecifiedWithPaginationAndWithFieldParams[T any](qu
 	}
 }
 
+func GetAllByParamsWithoutServiceFuncSpecifiedWith[T any](paramNames []model.QueryStructure, preloads ...string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		queryParams := make(map[string]interface{})
+
+		for _, param := range paramNames {
+			queryParams[param.DbTableColumn] = c.Param(param.ParamName)
+		}
+
+		page, _ := strconv.Atoi(c.Request.URL.Query().Get("page"))
+		sort := c.Request.URL.Query().Get("sort")
+		limit, _ := strconv.Atoi(c.Request.URL.Query().Get("limit"))
+		general_goutils.Logger.Info(fmt.Sprintf("page: %v and limit: %v",page, limit))
+		if general_goutils.IsLessThanOrEqualTo(page,0) && general_goutils.IsLessThanOrEqualTo(limit,0) {
+
+			rows, err := repo.GetAllByFieldsWithNoPagination[T](queryParams, preloads...)
+			if err != nil {
+				c.JSON(responses.InternalServerError, responses.SetResponse(responses.InternalServerError, "error", err.Error()))
+				return
+			}
+			c.JSON(responses.OK, responses.SetResponse(responses.OK, "successful", rows))
+			return
+		}
+
+		repo.SetPagination(limit, page, sort)
+
+		rows, err := repo.GetAllByFieldsWithPagination[T](queryParams, preloads...)
+		if err != nil {
+			c.JSON(responses.InternalServerError, responses.SetResponse(responses.InternalServerError, "error", err.Error()))
+			return
+		}
+		c.JSON(responses.OK, responses.SetResponse(responses.OK, "successful", rows))
+
+	}
+}
+
 func GetOneByIdWithoutServiceFuncSpecifiedWith[T any](preloads ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
@@ -94,3 +134,31 @@ func GetOneByIdWithoutServiceFuncSpecifiedWith[T any](preloads ...string) gin.Ha
 	}
 }
 
+func GetOneByParamsWithoutServiceFuncSpecifiedWith[T any](paramNames ...model.QueryStructure) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		queryParams := make(map[string]interface{})
+
+		for _, param := range paramNames {
+			queryParams[param.DbTableColumn] = c.Param(param.ParamName)
+		}
+
+		rows, err := repo.GetOneByModelProperties[T](queryParams)
+		if err != nil {
+			c.JSON(responses.InternalServerError, responses.SetResponse(responses.InternalServerError, "error", err.Error()))
+			return
+		}
+
+		firstField := reflect.ValueOf(queryParams).MapKeys()[0]
+
+		r := reflect.ValueOf(rows)
+		f := reflect.Indirect(r).FieldByName(general_goutils.ToCamelCase(firstField.String()))
+
+		if general_goutils.IsNullOrEmpty(f) {
+			c.JSON(responses.OK, responses.SetResponse(responses.OK, "record does not exist", nil))
+			return
+		}
+
+		c.JSON(responses.OK, responses.SetResponse(responses.OK, "successful", rows))
+	}
+}

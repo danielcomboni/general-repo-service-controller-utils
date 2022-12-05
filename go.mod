@@ -57,7 +57,7 @@ require (
 )
 
 require (
-	github.com/danielcomboni/general-go-utils v0.2.3
+	github.com/danielcomboni/general-go-utils v0.2.4
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-playground/validator/v10 v10.11.1
 	github.com/jinzhu/inflection v1.0.0 // indirect

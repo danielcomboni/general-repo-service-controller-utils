@@ -294,6 +294,16 @@ func GetOneByModelProperties[T any](queryMap map[string]interface{}) (T, error) 
 		return row, err
 	}
 
+	firstField := reflect.ValueOf(queryMap).MapKeys()[0]
+
+	r := reflect.ValueOf(row)
+	f := reflect.Indirect(r).FieldByName(gen_utils.ToCamelCase(firstField.String()))
+
+	if gen_utils.IsNullOrEmpty(f) {
+		gen_utils.Logger.Info("no record found")
+		return *new(T), nil
+	}
+
 	return row, nil
 }
 
@@ -402,7 +412,7 @@ func UpdateByIdWithPropertyCheck[T any](t T, id interface{}, property ...string)
 			return one, errors.New(msg)
 		}
 		gen_utils.Logger.Info(fmt.Sprintf("updated row with %v: %v", property[0], gen_utils.SafeGetFromInterface(one, "$."+gen_utils.ToCamelCaseLower(property[0]))))
-	}else {
+	} else {
 		gen_utils.Logger.Info(fmt.Sprintf("updated row with id: %v", gen_utils.SafeGetFromInterface(one, "$.id")))
 	}
 	return one, nil
