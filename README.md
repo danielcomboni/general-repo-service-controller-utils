@@ -1,3 +1,3 @@
 ```console
-go get github.com/danielcomboni/general-repo-service-controller-utils@v0.1.8
+go get github.com/danielcomboni/general-repo-service-controller-utils@v0.1.9
 ```

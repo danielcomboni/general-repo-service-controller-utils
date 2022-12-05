@@ -145,7 +145,7 @@ func CreateWithoutServiceFuncSpecified_CheckDuplicatesFirst_AndCheckPropertyPres
 	return func(c *gin.Context) {
 
 		data, err := c.GetRawData()
-
+		general_goutils.Logger.Info(fmt.Sprintf("incoming request data %v", string(data)))
 		if err != nil {
 			msg := "get raw failed: " + err.Error()
 			general_goutils.Logger.Error(msg)

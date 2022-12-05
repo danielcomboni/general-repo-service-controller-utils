@@ -38,6 +38,42 @@ func GetAllWithServiceFuncSpecified_WithNoPagination[T any](c *gin.Context, fnSe
 	c.JSON(responses.OK, responses.SetResponse(responses.OK, "successful", rows))
 }
 
+func GetAllWithoutServiceFuncSpecifiedWithDefaultPagination[T any](paramNames []model.QueryStructure, preloads ...string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		queryParams := make(map[string]interface{})
+
+		for _, param := range paramNames {
+			queryParams[param.DbTableColumn] = c.Param(param.ParamName)
+		}
+
+		page, _ := strconv.Atoi(c.Request.URL.Query().Get("page"))
+		sort := c.Request.URL.Query().Get("sort")
+		limit, _ := strconv.Atoi(c.Request.URL.Query().Get("limit"))
+		general_goutils.Logger.Info(fmt.Sprintf("page: %v and limit: %v", page, limit))
+		if general_goutils.IsLessThanOrEqualTo(page, 0) && general_goutils.IsLessThanOrEqualTo(limit, 0) {
+
+			rows, err := repo.GetAllByFieldsWithNoPagination[T](queryParams, preloads...)
+			if err != nil {
+				c.JSON(responses.InternalServerError, responses.SetResponse(responses.InternalServerError, "error", err.Error()))
+				return
+			}
+			c.JSON(responses.OK, responses.SetResponse(responses.OK, "successful", rows))
+			return
+		}
+
+		repo.SetPagination(limit, page, sort)
+
+		rows, err := repo.GetAllByFieldsWithPagination[T](queryParams, preloads...)
+		if err != nil {
+			c.JSON(responses.InternalServerError, responses.SetResponse(responses.InternalServerError, "error", err.Error()))
+			return
+		}
+		c.JSON(responses.OK, responses.SetResponse(responses.OK, "successful", rows))
+	}
+}
+
+
 func GetAllWithoutServiceFuncSpecifiedWithNoPagination[T any]() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
@@ -94,6 +130,7 @@ func GetAllByParamsWithoutServiceFuncSpecifiedWith[T any](paramNames []model.Que
 		for _, param := range paramNames {
 			queryParams[param.DbTableColumn] = c.Param(param.ParamName)
 		}
+
 
 		page, _ := strconv.Atoi(c.Request.URL.Query().Get("page"))
 		sort := c.Request.URL.Query().Get("sort")

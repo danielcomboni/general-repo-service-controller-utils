@@ -2,7 +2,6 @@ package service
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 
 	general_goutils "github.com/danielcomboni/general-go-utils"
@@ -55,7 +54,7 @@ func CreateWithPriorCheckForDuplicateOfAssociatedEntity[T any, A any](model T, q
 		}
 	}
 
-	if !general_goutils.IsNullOrEmpty(general_goutils.SafeGet(pretty.JSON(presence), "$.id")) {
+	if  !general_goutils.IsNullOrEmpty(general_goutils.SafeGet(pretty.JSON(presence), "$.id")) && pretty.JSON(general_goutils.SafeGet(pretty.JSON(presence), "$.id")) != "0" {
 		general_goutils.Logger.Warn("duplicated found")
 		return model, responses.SetResponse(responses.ConflictOrDuplicateOrAlreadyExists, "already exists. (duplicate found)", presence), err
 	}
@@ -75,8 +74,7 @@ func CreateWithPriorCheckForDuplicateOfAssociatedEntityHttp[T any, A any](model 
 		}
 	}
 
-	r := reflect.ValueOf(presence)
-	if !general_goutils.IsNullOrEmpty(reflect.Indirect(r).FieldByName("Id")) {
+	if !general_goutils.IsNullOrEmpty(   general_goutils.SafeGet(pretty.JSON(presence),"$.id")   ) {
 		return model, responses.SetResponse(responses.ConflictOrDuplicateOrAlreadyExists, "already exists", nil), err
 	}
 
