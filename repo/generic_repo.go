@@ -467,7 +467,7 @@ func DeleteHardById[T any](id interface{}) (int64, error) {
 		return 0, err
 	}
 
-	r := Instance.Delete(&one).Where("id=?", id)
+	r := Instance.Unscoped().Delete(&one).Where("id=?", id)
 
 	if r.Error != nil {
 		gen_utils.Logger.Error(fmt.Sprintf("failed to delete row by id: %v", id))
