@@ -3,6 +3,8 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
+	// "reflect"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mitchellh/mapstructure"
@@ -97,13 +99,13 @@ func CreateWithoutServiceFuncSpecified_AndCheckPropertyPresence[T any](property 
 
 		var model T
 		err = json.Unmarshal(data, &model)
-		
+
 		if err != nil {
 			msg := fmt.Sprintf("failed to map incoming object: %v", err.Error())
 			c.JSON(responses.BadRequest, responses.SetResponse(responses.BadRequest, msg, err.Error()))
 			return
 		}
-		
+
 		//use the validator library to Validate required fields
 		if validationErr := validate.Struct(model); validationErr != nil {
 			general_goutils.Logger.Info(fmt.Sprintf("incoming: %v", pretty.JSON(model)))
@@ -120,6 +122,67 @@ func CreateWithoutServiceFuncSpecified_AndCheckPropertyPresence[T any](property 
 			msg := fmt.Sprintf("failed to save record: %v", err)
 			general_goutils.Logger.Error(msg)
 
+			c.JSON(responses.InternalServerError, responses.SetResponse(responses.InternalServerError, "error", err.Error()))
+			return
+		}
+
+		if !general_goutils.IsNullOrEmpty(res.Message) {
+			msg := fmt.Sprintf("%v", res.Message)
+			general_goutils.Logger.Info(msg)
+
+			c.JSON(res.Status, res)
+			return
+		}
+
+		c.JSON(responses.Created, responses.SetResponse(responses.Created, "successful", created))
+
+	}
+
+}
+
+func CreateWithoutServiceFuncSpecified_CheckDuplicatesFirst_AndCheckPropertyPresence[T any](duplicateCheckProperties []string, property ...string) gin.HandlerFunc {
+
+	return func(c *gin.Context) {
+
+		data, err := c.GetRawData()
+
+		if err != nil {
+			msg := "get raw failed: " + err.Error()
+			general_goutils.Logger.Error(msg)
+			return
+		}
+
+		var model T
+		err = json.Unmarshal(data, &model)
+
+		if err != nil {
+			msg := fmt.Sprintf("failed to map incoming object: %v", err.Error())
+			c.JSON(responses.BadRequest, responses.SetResponse(responses.BadRequest, msg, err.Error()))
+			return
+		}
+
+		//use the validator library to Validate required fields
+		if validationErr := validate.Struct(model); validationErr != nil {
+			general_goutils.Logger.Info(fmt.Sprintf("incoming: %v", pretty.JSON(model)))
+			msg := fmt.Sprintf("failed to Validate incoming object: %v", validationErr)
+			general_goutils.Logger.Error(msg)
+			c.JSON(responses.BadRequest, responses.SetResponse(responses.BadRequest, "error", validationErr.Error()))
+			return
+		}
+
+		dupChecks := make(map[string]interface{})
+
+		for _, p := range duplicateCheckProperties {
+
+			dupChecks[strings.ToLower(general_goutils.ToSnakeCase(p))] = general_goutils.SafeGetFromInterfaceGeneric[T](model, fmt.Sprintf("$.%v", general_goutils.ToCamelCaseLower(p)))
+
+		}
+
+		created, res, err := service.CreateWithPriorCheckForDuplicateOfAssociatedEntity[T, T](model, dupChecks, property...)
+
+		if err != nil {
+			msg := fmt.Sprintf("failed to save record: %v", err)
+			general_goutils.Logger.Error(msg)
 			c.JSON(responses.InternalServerError, responses.SetResponse(responses.InternalServerError, "error", err.Error()))
 			return
 		}

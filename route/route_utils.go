@@ -81,3 +81,10 @@ func (s *SingleEntityGroupedRouteDefinition[T]) AddGetAllUsingPathParams(relativ
 	s.DefaultEndpointGroup.GET(path, controller.GetAllByParamsWithoutServiceFuncSpecifiedWith[T](queryParams))	
 	return s
 }
+
+func (s *SingleEntityGroupedRouteDefinition[T]) AddPostWithDuplicateCheckUsingProperties(relativePath, domainResource string, 
+	duplicateCheckerParams []string, rowAffectedCheckProperties ...string) *SingleEntityGroupedRouteDefinition[T] {	
+	path := concatEndpoint(domainResource, relativePath)
+	s.DefaultEndpointGroup.POST(path, controller.CreateWithoutServiceFuncSpecified_CheckDuplicatesFirst_AndCheckPropertyPresence[T](duplicateCheckerParams, rowAffectedCheckProperties...))	
+	return s
+}

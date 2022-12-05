@@ -8,6 +8,7 @@ import (
 	general_goutils "github.com/danielcomboni/general-go-utils"
 	"github.com/danielcomboni/general-repo-service-controller-utils/repo"
 	"github.com/danielcomboni/general-repo-service-controller-utils/responses"
+	"github.com/ohler55/ojg/pretty"
 )
 
 // Create where T is the entity of interest and model is the instance of the entity
@@ -43,21 +44,24 @@ func Create[T any](model *T) (T, error) {
 }
 
 // CreateWithPriorCheckForDuplicateOfAssociatedEntity where T is the entity of interest and A in the associated entity whose duplicate check is to be performed
-func CreateWithPriorCheckForDuplicateOfAssociatedEntity[T any, A any](model T, queryMap map[string]interface{}) (T, error) {
+func CreateWithPriorCheckForDuplicateOfAssociatedEntity[T any, A any](model T, queryMap map[string]interface{}, properties ...string) (T, responses.GenericResponse, error) {
 
-	presence, err := repo.GetOneByModelPropertiesCheckIdPresence[A](queryMap)
+	presence, err := repo.GetOneByModelProperties[A](queryMap)
+
 	if err != nil {
 		if strings.ToLower(strings.TrimSpace(err.Error())) != "record not found" {
-			return model, err
+			// msg := fmt.Sprintf("error when checking for duplicate: %v",err.Error())
+			return model, responses.SetResponse(responses.BadRequest, "error occurred when cehcking for duplicate", err), err
 		}
 	}
 
-	r := reflect.ValueOf(presence)
-	if !general_goutils.IsNullOrEmpty(reflect.Indirect(r).FieldByName("Id")) {
-		return model, err
+	if !general_goutils.IsNullOrEmpty(general_goutils.SafeGet(pretty.JSON(presence), "$.id")) {
+		general_goutils.Logger.Warn("duplicated found")
+		return model, responses.SetResponse(responses.ConflictOrDuplicateOrAlreadyExists, "already exists. (duplicate found)", presence), err
 	}
 
-	return Create[T](&model)
+	return repo.CreateWithPropertyCheckHttpResponse[T](&model, properties...)
+	// return Create[T](&model)
 
 }
 

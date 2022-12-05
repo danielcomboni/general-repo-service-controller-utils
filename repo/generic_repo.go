@@ -7,6 +7,7 @@ import (
 	"reflect"
 
 	gen_utils "github.com/danielcomboni/general-go-utils"
+	"github.com/danielcomboni/general-repo-service-controller-utils/responses"
 	"github.com/gobeam/stringy"
 	"github.com/mitchellh/mapstructure"
 	"gorm.io/gorm"
@@ -85,6 +86,37 @@ func Create[T any](model *T) (T, error) {
 		gen_utils.Logger.Info(fmt.Sprintf("saved to database: id: %v", gen_utils.SafeGetFromInterface(t, "$.id")))
 	}
 	return t, nil
+}
+
+
+func CreateWithPropertyCheckHttpResponse[T any](model *T, property ...string) (T, responses.GenericResponse,error) {
+	gen_utils.Logger.Info(fmt.Sprintf("\n\ncreating a new record: %v", reflect.TypeOf(*new(T)).Name()))
+	var t T
+	// result := Instance.Create(&model).Scan(&t)
+	result := Instance.Create(&model).Scan(&t)
+
+	_, err := result.DB()
+	if err != nil {
+		msg := fmt.Sprintf("failed to create: %v", err.Error())
+		gen_utils.Logger.Error(msg)
+		return *model, responses.SetResponse(responses.InternalServerError, "error occurred when saving record", err),err
+	}
+
+	// if property to check is provided and the entity actually contains the particular property
+	if gen_utils.IsGreaterThan(len(property), 0) && gen_utils.HasField[T](property[0]) {
+		if gen_utils.IsNullOrEmpty((gen_utils.SafeGetFromInterface(&model, "$."+gen_utils.ToCamelCaseLower(property[0])))) {
+			msg := fmt.Sprintf("not saved: %v", result.Error.Error())
+			gen_utils.Logger.Error(msg)
+			return *model,responses.SetResponse(responses.InternalServerError, "error occurred when saving record", result.Error), errors.New(msg)
+		}
+	}
+
+	if gen_utils.HasField[T]("Id") {
+		if result.RowsAffected > 0 {
+			gen_utils.Logger.Info(fmt.Sprintf("saved to database: id: %v", gen_utils.SafeGetFromInterface(t, "$.id")))
+		}
+	}
+	return t, responses.SetResponse(responses.Created, "successful", t),nil
 }
 
 func CreateWithPropertyCheck[T any](model *T, property ...string) (T, error) {
