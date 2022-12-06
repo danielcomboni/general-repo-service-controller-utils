@@ -288,6 +288,7 @@ func GetOneByModelPropertiesCheckPropertyPresence[T any](queryMap map[string]int
 	var row T
 	result := Instance.Where(queryMap).First(&row)
 	_, err := result.DB()
+
 	if err != nil {
 		gen_utils.Logger.Error(fmt.Sprintf("failed to retrieve: %v %v", reflect.TypeOf(*new(T)).Name(), err))
 		return row, err
@@ -331,7 +332,7 @@ func GetOneByModelProperties[T any](queryMap map[string]interface{}) (T, error) 
 	r := reflect.ValueOf(row)
 	f := reflect.Indirect(r).FieldByName(gen_utils.ToCamelCase(firstField.String()))
 
-	if gen_utils.IsNullOrEmpty(f) {
+	if gen_utils.IsNullOrEmpty(f) && gen_utils.ToCamelCase(firstField.String()) != "id" {
 		gen_utils.Logger.Info("no record found")
 		return *new(T), nil
 	}

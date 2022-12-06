@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/ohler55/ojg/pretty"
 
 	general_goutils "github.com/danielcomboni/general-go-utils"
 	"github.com/danielcomboni/general-repo-service-controller-utils/model"
@@ -167,6 +168,14 @@ func GetOneByIdWithoutServiceFuncSpecifiedWith[T any](preloads ...string) gin.Ha
 			c.JSON(responses.InternalServerError, responses.SetResponse(responses.InternalServerError, "error", err.Error()))
 			return
 		}
+
+		if general_goutils.IsNullOrEmpty(general_goutils.SafeGet(pretty.JSON(rows),"$.id")) || 
+		general_goutils.IsLessThanOrEqualTo(general_goutils.ConvertStrToInt64(general_goutils.SafeGetToString(pretty.JSON(rows),"$.id")),0){
+			
+			c.JSON(responses.OK, responses.SetResponse(responses.OK, "record not found", nil))
+			return
+		}
+
 		c.JSON(responses.OK, responses.SetResponse(responses.OK, "successful", rows))
 	}
 }
