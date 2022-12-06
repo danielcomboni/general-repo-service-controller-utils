@@ -10,6 +10,7 @@ import (
 	"github.com/danielcomboni/general-repo-service-controller-utils/responses"
 	"github.com/gobeam/stringy"
 	"github.com/mitchellh/mapstructure"
+	"github.com/ohler55/ojg/pretty"
 	"gorm.io/gorm"
 )
 
@@ -88,8 +89,7 @@ func Create[T any](model *T) (T, error) {
 	return t, nil
 }
 
-
-func CreateWithPropertyCheckHttpResponse[T any](model *T, property ...string) (T, responses.GenericResponse,error) {
+func CreateWithPropertyCheckHttpResponse[T any](model *T, property ...string) (T, responses.GenericResponse, error) {
 	gen_utils.Logger.Info(fmt.Sprintf("\n\ncreating a new record: %v", reflect.TypeOf(*new(T)).Name()))
 	var t T
 	// result := Instance.Create(&model).Scan(&t)
@@ -99,7 +99,7 @@ func CreateWithPropertyCheckHttpResponse[T any](model *T, property ...string) (T
 	if err != nil {
 		msg := fmt.Sprintf("failed to create: %v", err.Error())
 		gen_utils.Logger.Error(msg)
-		return *model, responses.SetResponse(responses.InternalServerError, "error occurred when saving record", err),err
+		return *model, responses.SetResponse(responses.InternalServerError, "error occurred when saving record", err), err
 	}
 
 	// if property to check is provided and the entity actually contains the particular property
@@ -107,7 +107,7 @@ func CreateWithPropertyCheckHttpResponse[T any](model *T, property ...string) (T
 		if gen_utils.IsNullOrEmpty((gen_utils.SafeGetFromInterface(&model, "$."+gen_utils.ToCamelCaseLower(property[0])))) {
 			msg := fmt.Sprintf("not saved: %v", result.Error.Error())
 			gen_utils.Logger.Error(msg)
-			return *model,responses.SetResponse(responses.InternalServerError, "error occurred when saving record", result.Error), errors.New(msg)
+			return *model, responses.SetResponse(responses.InternalServerError, "error occurred when saving record", result.Error), errors.New(msg)
 		}
 	}
 
@@ -116,7 +116,7 @@ func CreateWithPropertyCheckHttpResponse[T any](model *T, property ...string) (T
 			gen_utils.Logger.Info(fmt.Sprintf("saved to database: id: %v", gen_utils.SafeGetFromInterface(t, "$.id")))
 		}
 	}
-	return t, responses.SetResponse(responses.Created, "successful", t),nil
+	return t, responses.SetResponse(responses.Created, "successful", t), nil
 }
 
 func CreateWithPropertyCheck[T any](model *T, property ...string) (T, error) {
@@ -260,6 +260,7 @@ func GetOneById[T any](id interface{}, preloads ...string) (T, error) {
 		gen_utils.Logger.Error(fmt.Sprintf("failed to retrieve: %v %v", reflect.TypeOf(*new(T)).Name(), err))
 		return row, err
 	}
+
 	return row, nil
 }
 
@@ -488,6 +489,13 @@ func DeleteHardById[T any](id interface{}) (int64, error) {
 	gen_utils.Logger.Info(fmt.Sprintf("\n\nhard deleting a row of: %v by id: %v", reflect.TypeOf(*new(T)).Name(), id))
 
 	one, err := GetOneById[T](id)
+
+	if gen_utils.IsNullOrEmpty(gen_utils.SafeGet(pretty.JSON(one), "$.id")) ||
+		gen_utils.IsLessThanOrEqualTo(gen_utils.ConvertStrToInt64(gen_utils.SafeGetToString(pretty.JSON(one), "$.id")), 0) {
+		gen_utils.Logger.Error(fmt.Sprintf("record of id: %v not found", id))
+		return 0, errors.New("record not found")
+	}
+
 	var t2 T
 	if err != nil {
 		return 0, err
