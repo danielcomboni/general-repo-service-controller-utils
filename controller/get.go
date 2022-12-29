@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -9,7 +10,8 @@ import (
 	"github.com/ohler55/ojg/pretty"
 
 	general_goutils "github.com/danielcomboni/general-go-utils"
-	"github.com/danielcomboni/general-repo-service-controller-utils/model"
+	// "github.com/danielcomboni/general-repo-service-controller-utils/model"
+	"github.com/danielcomboni/general-repo-service-controller-utils/models"
 	"github.com/danielcomboni/general-repo-service-controller-utils/repo"
 	"github.com/danielcomboni/general-repo-service-controller-utils/responses"
 )
@@ -39,8 +41,17 @@ func GetAllWithServiceFuncSpecified_WithNoPagination[T any](c *gin.Context, fnSe
 	c.JSON(responses.OK, responses.SetResponse(responses.OK, "successful", rows))
 }
 
-func GetAllWithoutServiceFuncSpecifiedWithDefaultPagination[T any](paramNames []model.QueryStructure, preloads ...string) gin.HandlerFunc {
+func GetAllWithoutServiceFuncSpecifiedWithDefaultPagination[T any](paramNames []models.QueryStructure, preloads []string,
+	funcAuth func(*gin.Context) (*gin.Context, bool, string)) gin.HandlerFunc {
 	return func(c *gin.Context) {
+
+		if funcAuth != nil {
+			_, flag, msg := funcAuth(c)
+			if !flag {
+				c.JSON(responses.UnAuthorized, responses.SetResponse(responses.UnAuthorized, msg, errors.New("failed to authenticate")))
+				return
+			}
+		}
 
 		queryParams := make(map[string]interface{})
 
@@ -73,7 +84,6 @@ func GetAllWithoutServiceFuncSpecifiedWithDefaultPagination[T any](paramNames []
 		c.JSON(responses.OK, responses.SetResponse(responses.OK, "successful", rows))
 	}
 }
-
 
 func GetAllWithoutServiceFuncSpecifiedWithNoPagination[T any]() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -123,8 +133,16 @@ func GetAllWithoutServiceFuncSpecifiedWithPaginationAndWithFieldParams[T any](qu
 	}
 }
 
-func GetAllByParamsWithoutServiceFuncSpecifiedWith[T any](paramNames []model.QueryStructure, preloads ...string) gin.HandlerFunc {
+func GetAllByParamsWithoutServiceFuncSpecifiedWith[T any](paramNames []models.QueryStructure, preloads []string, funcAuth func(*gin.Context) (*gin.Context, bool, string)) gin.HandlerFunc {
 	return func(c *gin.Context) {
+
+		if funcAuth != nil {
+			_, flag, msg := funcAuth(c)
+			if !flag {
+				c.JSON(responses.UnAuthorized, responses.SetResponse(responses.UnAuthorized, msg, errors.New("failed to authenticate")))
+				return
+			}
+		}
 
 		queryParams := make(map[string]interface{})
 
@@ -132,12 +150,11 @@ func GetAllByParamsWithoutServiceFuncSpecifiedWith[T any](paramNames []model.Que
 			queryParams[param.DbTableColumn] = c.Param(param.ParamName)
 		}
 
-
 		page, _ := strconv.Atoi(c.Request.URL.Query().Get("page"))
 		sort := c.Request.URL.Query().Get("sort")
 		limit, _ := strconv.Atoi(c.Request.URL.Query().Get("limit"))
-		general_goutils.Logger.Info(fmt.Sprintf("page: %v and limit: %v",page, limit))
-		if general_goutils.IsLessThanOrEqualTo(page,0) && general_goutils.IsLessThanOrEqualTo(limit,0) {
+		general_goutils.Logger.Info(fmt.Sprintf("page: %v and limit: %v", page, limit))
+		if general_goutils.IsLessThanOrEqualTo(page, 0) && general_goutils.IsLessThanOrEqualTo(limit, 0) {
 
 			rows, err := repo.GetAllByFieldsWithNoPagination[T](queryParams, preloads...)
 			if err != nil {
@@ -160,8 +177,18 @@ func GetAllByParamsWithoutServiceFuncSpecifiedWith[T any](paramNames []model.Que
 	}
 }
 
-func GetOneByIdWithoutServiceFuncSpecifiedWith[T any](preloads ...string) gin.HandlerFunc {
+func GetOneByIdWithoutServiceFuncSpecifiedWith[T any](preloads []string,
+	funcAuth func(*gin.Context) (*gin.Context, bool, string)) gin.HandlerFunc {
 	return func(c *gin.Context) {
+
+		if funcAuth != nil {
+			_, flag, msg := funcAuth(c)
+			if !flag {
+				c.JSON(responses.UnAuthorized, responses.SetResponse(responses.UnAuthorized, msg, errors.New("failed to authenticate")))
+				return
+			}
+		}
+
 		id := c.Param("id")
 		rows, err := repo.GetOneById[T](id, preloads...)
 		if err != nil {
@@ -169,9 +196,9 @@ func GetOneByIdWithoutServiceFuncSpecifiedWith[T any](preloads ...string) gin.Ha
 			return
 		}
 
-		if general_goutils.IsNullOrEmpty(general_goutils.SafeGet(pretty.JSON(rows),"$.id")) || 
-		general_goutils.IsLessThanOrEqualTo(general_goutils.ConvertStrToInt64(general_goutils.SafeGetToString(pretty.JSON(rows),"$.id")),0){
-			
+		if general_goutils.IsNullOrEmpty(general_goutils.SafeGet(pretty.JSON(rows), "$.id")) ||
+			general_goutils.IsLessThanOrEqualTo(general_goutils.ConvertStrToInt64(general_goutils.SafeGetToString(pretty.JSON(rows), "$.id")), 0) {
+
 			c.JSON(responses.OK, responses.SetResponse(responses.OK, "record not found", nil))
 			return
 		}
@@ -180,9 +207,16 @@ func GetOneByIdWithoutServiceFuncSpecifiedWith[T any](preloads ...string) gin.Ha
 	}
 }
 
-func GetOneByParamsWithoutServiceFuncSpecifiedWith[T any](paramNames ...model.QueryStructure) gin.HandlerFunc {
+func GetOneByParamsWithoutServiceFuncSpecifiedWith[T any](paramNames []models.QueryStructure, funcAuth func(*gin.Context) (*gin.Context, bool, string)) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
+		if funcAuth != nil {
+			_, flag, msg := funcAuth(c)
+			if !flag {
+				c.JSON(responses.UnAuthorized, responses.SetResponse(responses.UnAuthorized, msg, errors.New("failed to authenticate")))
+				return
+			}
+		}
 		queryParams := make(map[string]interface{})
 
 		for _, param := range paramNames {

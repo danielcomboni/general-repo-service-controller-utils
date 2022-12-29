@@ -2,20 +2,28 @@ package controller
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ohler55/ojg/pretty"
 
 	general_goutils "github.com/danielcomboni/general-go-utils"
+	// "github.com/danielcomboni/general-repo-service-controller-utils/models"
 	"github.com/danielcomboni/general-repo-service-controller-utils/responses"
 	"github.com/danielcomboni/general-repo-service-controller-utils/service"
 )
 
-// 
-func UpdateByIdWithoutServiceFuncSpecified_AndCheckPropertyPresence[T any](property ...string) gin.HandlerFunc {
-
+func UpdateByIdWithoutServiceFuncSpecified_AndCheckPropertyPresence[T any](funcAuth func(*gin.Context) (*gin.Context, bool, string)) gin.HandlerFunc {
 	return func(c *gin.Context) {
+
+		if funcAuth != nil {
+			_, flag, msg := funcAuth(c)
+			if !flag {
+				c.JSON(responses.UnAuthorized, responses.SetResponse(responses.UnAuthorized, msg, errors.New("failed to authenticate")))
+				return
+			}
+		}
 
 		id := c.Param("id")
 		data, err := c.GetRawData()
@@ -28,13 +36,13 @@ func UpdateByIdWithoutServiceFuncSpecified_AndCheckPropertyPresence[T any](prope
 
 		var model T
 		err = json.Unmarshal(data, &model)
-		
+
 		if err != nil {
 			msg := fmt.Sprintf("failed to map incoming object: %v", err.Error())
 			c.JSON(responses.BadRequest, responses.SetResponse(responses.BadRequest, msg, err.Error()))
 			return
 		}
-		
+
 		//use the validator library to Validate required fields
 		if validationErr := validate.Struct(model); validationErr != nil {
 			general_goutils.Logger.Info(fmt.Sprintf("incoming: %v", pretty.JSON(model)))
@@ -45,7 +53,7 @@ func UpdateByIdWithoutServiceFuncSpecified_AndCheckPropertyPresence[T any](prope
 		}
 
 		// save (update) to database
-		updated,res, err := service.UpdateHttpWithPropertyCheck[T](&model, id, property...)
+		updated, res, err := service.UpdateHttpWithPropertyCheck[T](&model, id)
 		if err != nil {
 			msg := fmt.Sprintf("failed to update record: %v", err)
 			general_goutils.Logger.Error(msg)
