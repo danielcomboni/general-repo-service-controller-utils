@@ -25,7 +25,6 @@ func GetAllWithServiceFuncSpecified_And_WithPagination[T any](c *gin.Context, fn
 
 	rows, err := fnServiceGetAll()
 	if err != nil {
-
 		c.JSON(responses.InternalServerError, responses.SetResponse(responses.InternalServerError, "error", err.Error()))
 		return
 	}
@@ -41,8 +40,7 @@ func GetAllWithServiceFuncSpecified_WithNoPagination[T any](c *gin.Context, fnSe
 	c.JSON(responses.OK, responses.SetResponse(responses.OK, "successful", rows))
 }
 
-func GetAllWithoutServiceFuncSpecifiedWithDefaultPagination[T any](paramNames []models.QueryStructure, preloads []string,
-	funcAuth func(*gin.Context) (*gin.Context, bool, string)) gin.HandlerFunc {
+func GetAllWithoutServiceFuncSpecifiedWithDefaultPagination[T any](paramNames []models.QueryStructure, preloads []string,funcAuth func(*gin.Context) (*gin.Context, bool, string)) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		if funcAuth != nil {

@@ -1,5 +1,5 @@
 ```console
-go get github.com/danielcomboni/general-repo-service-controller-utils@v0.3.1
+go get github.com/danielcomboni/general-repo-service-controller-utils@v0.3.2
 ```
 
 -------------------------------------- example --------------------------------------

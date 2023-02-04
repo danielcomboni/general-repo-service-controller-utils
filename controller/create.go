@@ -87,8 +87,7 @@ func CreateWithServiceFuncSpecified[T any](model *T, c *gin.Context, fnServiceCr
 
 // CreateWithoutServiceFuncSpecified_AndCheckPropertyPresence inserts into the database and checks for the isnerted row based on the
 // property provided
-func CreateWithoutServiceFuncSpecified_AndCheckPropertyPresence[T any](property []string,
-	funcAuth func(*gin.Context) (*gin.Context, bool, string)) gin.HandlerFunc {
+func CreateWithoutServiceFuncSpecified_AndCheckPropertyPresence[T any](property []string, funcAuth func(*gin.Context) (*gin.Context, bool, string)) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		if funcAuth != nil {

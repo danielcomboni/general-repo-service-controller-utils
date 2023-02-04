@@ -83,11 +83,20 @@ func (s *SingleEntityGroupedRouteDefinition[T]) SetSingleEntityGroupedRouteDefin
 	if len(customerHandlers) == 0 || customerHandlers == nil {
 		endpointGroupV1 := router.Group(relativePath)
 		{
-			Post(endpointGroupV1, domainResource, relativePath, controller.CreateWithoutServiceFuncSpecified_AndCheckPropertyPresence[T]([]string{}, s.AuthDefaultPost))
-			Get(endpointGroupV1, domainResource, relativePath, controller.GetAllWithoutServiceFuncSpecifiedWithDefaultPagination[T](paramNames, preloads, s.AuthDefaultGetAll))
-			Get(endpointGroupV1, domainResource, fmt.Sprintf("%v/:id", relativePath), controller.GetOneByIdWithoutServiceFuncSpecifiedWith[T](preloads, s.AuthDefaultGetById))
-			Put(endpointGroupV1, domainResource, fmt.Sprintf("%v/:id", relativePath), controller.UpdateByIdWithoutServiceFuncSpecified_AndCheckPropertyPresence[T](s.AuthDefaultPut))
-			Del(endpointGroupV1, domainResource, fmt.Sprintf("%v/:id", relativePath), controller.DeletePermanentlyById_WithoutServiceFuncSpecified[T](s.AuthDefaultDelete))
+			Post(endpointGroupV1, domainResource, relativePath,
+				controller.CreateWithoutServiceFuncSpecified_AndCheckPropertyPresence[T]([]string{}, s.AuthDefaultPost))
+
+			Get(endpointGroupV1, domainResource, relativePath,
+				controller.GetAllWithoutServiceFuncSpecifiedWithDefaultPagination[T](paramNames, preloads, s.AuthDefaultGetAll))
+
+			Get(endpointGroupV1, domainResource, fmt.Sprintf("%v/:id", relativePath),
+				controller.GetOneByIdWithoutServiceFuncSpecifiedWith[T](preloads, s.AuthDefaultGetById))
+
+			Put(endpointGroupV1, domainResource, fmt.Sprintf("%v/:id", relativePath),
+				controller.UpdateByIdWithoutServiceFuncSpecified_AndCheckPropertyPresence[T](s.AuthDefaultPut))
+
+			Del(endpointGroupV1, domainResource, fmt.Sprintf("%v/:id", relativePath),
+				controller.DeletePermanentlyById_WithoutServiceFuncSpecified[T](s.AuthDefaultDelete))
 		}
 		s.DefaultEndpointGroup = endpointGroupV1
 	} else {
