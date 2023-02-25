@@ -175,6 +175,18 @@ func GetAll[T any]() ([]T, error) {
 	return all, nil
 }
 
+func GetAllWithNoParams[T any]() ([]T, error) {
+	gen_utils.Logger.Info(fmt.Sprintf("\n\nretreiving collection: %v", reflect.TypeOf(*new(T)).Name()))
+	var all []T
+	result := Instance.Find(&all)
+	_, err := result.DB()
+	if err != nil {
+		log.Println(fmt.Sprintf("failed to retrieve: %v %v", reflect.TypeOf(*new(T)).Name(), err))
+		return all, err
+	}
+	return all, nil
+}
+
 func preloadsHandler(preloads ...string) *gorm.DB {
 
 	instance := Instance
