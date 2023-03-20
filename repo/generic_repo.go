@@ -16,6 +16,18 @@ import (
 
 var Instance *gorm.DB
 
+func BeginTx() {
+	Instance.Begin()
+}
+
+func CommitTx() {
+	Instance.Commit()
+}
+
+func RollbackTx() {
+	Instance.Rollback()
+}
+
 func RepoInitializer(instance *gorm.DB) {
 	Instance = instance
 }
