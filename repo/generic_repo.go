@@ -126,9 +126,11 @@ func CreateWithPropertyCheckHttpResponse[T any](model *T, property ...string) (T
 	if gen_utils.HasField[T]("Id") {
 		if result.RowsAffected > 0 {
 			gen_utils.Logger.Info(fmt.Sprintf("saved to database: id: %v", gen_utils.SafeGetFromInterface(t, "$.id")))
+			return t, responses.SetResponse(responses.Created, "successful", t), nil
 		}
 	}
-	return t, responses.SetResponse(responses.Created, "successful", t), nil
+
+	return t, responses.SetResponse(responses.InternalServerError, "not created. something went wrong", t), nil
 }
 
 func CreateWithPropertyCheck[T any](model *T, property ...string) (T, error) {
