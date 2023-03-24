@@ -20,7 +20,7 @@ func DeletePermanentlyById_WithoutServiceFuncSpecified[T any](funcAuth func(*gin
 		}
 
 		id := c.Param("id")
-		rowsAffected, err := service.DeletePermanentlyById_WithoutService[T](id)
+		rowsAffected, _, err := service.DeletePermanentlyById_WithoutService[T](id)
 		if err != nil {
 			c.JSON(responses.InternalServerError, responses.SetResponse(responses.InternalServerError, "error", err.Error()))
 			return

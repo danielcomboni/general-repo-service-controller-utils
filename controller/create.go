@@ -125,7 +125,7 @@ func CreateWithoutServiceFuncSpecified_AndCheckPropertyPresence[T any](property 
 		}
 
 		// save (insert) to database
-		created, res, err := service.CreateHttpWithPropertyCheck[T](&model, property...)
+		created, res, _, err := service.CreateHttpWithPropertyCheck[T](&model, property...)
 		if err != nil {
 
 			msg := fmt.Sprintf("failed to save record: %v", err)
@@ -195,7 +195,7 @@ func CreateWithoutServiceFuncSpecified_CheckDuplicatesFirst_AndCheckPropertyPres
 
 		}
 
-		created, res, err := service.CreateWithPriorCheckForDuplicateOfAssociatedEntity[T, T](model, dupChecks, property...)
+		created, res, _, err := service.CreateWithPriorCheckForDuplicateOfAssociatedEntity[T, T](model, dupChecks, property...)
 
 		if err != nil {
 			msg := fmt.Sprintf("failed to save record: %v", err)

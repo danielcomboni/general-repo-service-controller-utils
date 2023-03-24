@@ -53,7 +53,7 @@ func UpdateByIdWithoutServiceFuncSpecified_AndCheckPropertyPresence[T any](funcA
 		}
 
 		// save (update) to database
-		updated, res, err := service.UpdateHttpWithPropertyCheck[T](&model, id)
+		updated, res, _, err := service.UpdateHttpWithPropertyCheck[T](&model, id)
 		if err != nil {
 			msg := fmt.Sprintf("failed to update record: %v", err)
 			general_goutils.Logger.Error(msg)
