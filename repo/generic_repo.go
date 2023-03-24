@@ -16,10 +16,6 @@ import (
 
 var Instance *gorm.DB
 
-func SavePoint(name string) *gorm.DB {
-	return Instance.SavePoint(name)
-}
-
 func RepoInitializer(instance *gorm.DB) {
 	Instance = instance
 }
