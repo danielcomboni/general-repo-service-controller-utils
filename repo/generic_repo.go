@@ -98,7 +98,6 @@ func Create[T any](model *T) (T, *gorm.DB, error) {
 func CreateWithPropertyCheckHttpResponse[T any](model *T, property ...string) (T, responses.GenericResponse, *gorm.DB, error) {
 	gen_utils.Logger.Info(fmt.Sprintf("\n\ncreating a new record: %v", reflect.TypeOf(*new(T)).Name()))
 	var t T
-	// result := Instance.Create(&model).Scan(&t)
 	tx := Instance.Begin()
 	result := tx.Create(&model).Scan(&t)
 
@@ -131,7 +130,6 @@ func CreateWithPropertyCheckHttpResponse[T any](model *T, property ...string) (T
 func CreateWithPropertyCheck[T any](model *T, property ...string) (T, *gorm.DB, error) {
 	gen_utils.Logger.Info(fmt.Sprintf("\n\ncreating a new record: %v", reflect.TypeOf(*new(T)).Name()))
 	var t T
-	// result := Instance.Create(&model).Scan(&t)
 	tx := Instance.Begin()
 	result := tx.Create(&model).Scan(&t)
 
