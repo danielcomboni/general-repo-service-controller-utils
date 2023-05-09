@@ -126,3 +126,34 @@ func (s *SingleEntityGroupedRouteDefinition[T]) AddPostWithDuplicateCheckUsingPr
 	s.DefaultEndpointGroup.POST(path, controller.CreateWithoutServiceFuncSpecified_CheckDuplicatesFirst_AndCheckPropertyPresence[T](duplicateCheckerParams, rowAffectedCheckProperties, funcAuth))
 	return s
 }
+
+// Use shorthand CRUD where:
+// C - stands for create
+// R - stands for retrieve
+// U - stands for update
+// D - stands for Delete
+
+type CRUDRouteDefinition[T any] struct {
+	RelativePath         string           `json:"relativePath,omitempty"`
+	DomainResource       string           `json:"domainResource,omitempty"`
+	CustomerHandlers     *gin.RouterGroup `json:"handlers,omitempty"`
+	DefaultEndpointGroup *gin.RouterGroup `json:"defaultEndpointGroup,omitempty"`
+	AuthDefaultGetAll    models.Auth      `json:"authDefaultGetAll"`
+	AuthDefaultGetById   models.Auth      `json:"authDefaultGetById"`
+	AuthDefaultPost      models.Auth      `json:"authDefaultPost"`
+	AuthDefaultPut       models.Auth      `json:"authDefaultPut"`
+	AuthDefaultDelete    models.Auth      `json:"authDefaultDelete"`
+}
+
+type CRUDParams struct {
+	Router                       *gin.Engine
+	RelativePath, DomainResource string
+	CustomerHandlers             []*gin.RouterGroup
+	ParamNames                   []models.QueryStructure
+	Preloads                     []string
+	FuncAuth                     func(*gin.Context) (*gin.Context, bool, string)
+}
+
+func (crud *CRUDRouteDefinition[T]) NewCrud() {
+
+}
